@@ -3,23 +3,31 @@ package com.rohr.portfolio_api.v1.service;
 
 import com.rohr.portfolio_api.v1.client.MemberClient;
 import com.rohr.portfolio_api.v1.client.response.MemberResponse;
+import com.rohr.portfolio_api.v1.domain.dto.MemberDTO;
 import com.rohr.portfolio_api.v1.domain.dto.ProjectDTO;
 import com.rohr.portfolio_api.v1.domain.entity.ProjectEntity;
 import com.rohr.portfolio_api.v1.domain.entity.ProjectMemberRelation;
 import com.rohr.portfolio_api.v1.domain.enums.Risco;
 import com.rohr.portfolio_api.v1.domain.enums.Status;
-import com.rohr.portfolio_api.v1.domain.form.ProcjectUpdateForm;
 import com.rohr.portfolio_api.v1.domain.form.ProjectCreateForm;
+import com.rohr.portfolio_api.v1.domain.form.ProjectFilterForm;
+import com.rohr.portfolio_api.v1.domain.form.ProjectUpdateForm;
+import com.rohr.portfolio_api.v1.mapper.MemberMapper;
 import com.rohr.portfolio_api.v1.mapper.ProjectMapper;
 import com.rohr.portfolio_api.v1.repository.ProjectMemberRelationRepository;
 import com.rohr.portfolio_api.v1.repository.ProjectRepository;
+import com.rohr.portfolio_api.v1.specification.ProjectSpecification;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -60,7 +68,7 @@ public class ProjectService {
     }
 
     @Transactional
-    public ProjectDTO updateProject(Long id, ProcjectUpdateForm form) {
+    public ProjectDTO updateProject(Long id, ProjectUpdateForm form) {
         Optional<ProjectEntity> optionalProjectEntity = this.projectRepository.findById(id);
 
         if (optionalProjectEntity.isEmpty())
@@ -68,13 +76,15 @@ public class ProjectService {
 
         ProjectEntity project = optionalProjectEntity.get();
 
-        if (!form.getNome().isBlank())
+        if (form.getNome() != null && !form.getNome().isBlank())
             project.setNome(form.getNome());
 
-        if (form.getOrcamento() != null)
+        if (form.getOrcamento() != null) {
             project.setOrcamento(form.getOrcamento());
+            project.setRisco(calculateRisk(project.getOrcamento(), project.getDataInicio(), project.getDataPrevistaTermino()));
+        }
 
-        if (!form.getDescricao().isBlank())
+        if (form.getDescricao() != null && !form.getDescricao().isBlank())
             project.setDescricao(form.getDescricao());
 
         if (form.getGerente() != null) {
@@ -84,25 +94,38 @@ public class ProjectService {
         if (form.getStatus() != null) {
             this.checkStatusIsValid(project.getStatus(), form.getStatus());
 
-            if(List.of(Status.ENCERRADO, Status.CANCELADO).contains(form.getStatus()))
-                project.setDataTermino(LocalDateTime.now());
+            if (List.of(Status.ENCERRADO, Status.CANCELADO).contains(form.getStatus()))
+                project.setDataTermino(LocalDate.now());
 
             project.setStatus(form.getStatus());
         }
 
-        if (!form.getMembersIds().isEmpty()) {
+        if (form.getMembersIds() != null && !form.getMembersIds().isEmpty()) {
             this.checkMembersIsValid(form.getMembersIds());
             this.projectMemberRelationRepository.deleteByProjectIds(id);
+        }
+
+        if (form.getDataPrevistaTermino() != null) {
+            project.setDataPrevistaTermino(form.getDataPrevistaTermino());
+            project.setRisco(calculateRisk(project.getOrcamento(), project.getDataInicio(), project.getDataPrevistaTermino()));
         }
 
         project.setUpdatedAt(LocalDateTime.now());
 
         project = this.projectRepository.save(project);
 
-        if (!form.getMembersIds().isEmpty())
+        if (form.getMembersIds() != null && !form.getMembersIds().isEmpty())
             this.createProjectMemberRelation(id, form.getMembersIds());
 
-        return ProjectMapper.toProjectDTO(project);
+        List<Long> membersIds = this.projectMemberRelationRepository.findByProjectId(project.getId())
+                .stream()
+                .map(ProjectMemberRelation::getMemberId)
+                .toList();
+
+        List<MemberDTO> members = this.memberClient.findMemberByIds(membersIds).stream().map(MemberMapper::toDTO).toList();
+        MemberDTO manager = this.memberClient.findMemberByIds(List.of(project.getGerente())).stream().map(MemberMapper::toDTO).findFirst().orElse(null);
+
+        return ProjectMapper.toProjectDTO(project, members, manager);
     }
 
     @Transactional
@@ -119,8 +142,33 @@ public class ProjectService {
         this.projectMemberRelationRepository.deleteByProjectIds(id);
     }
 
-    public List<ProjectDTO> listProjects() {
-        return this.projectRepository.findAll().stream()
+    public ProjectDTO findProject(Long id) {
+        Optional<ProjectEntity> optionalProject = this.projectRepository.findById(id);
+        if (optionalProject.isEmpty())
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Projeto não encontrado");
+
+        ProjectEntity project = optionalProject.get();
+
+        List<Long> membersIds = this.projectMemberRelationRepository.findByProjectId(project.getId())
+                .stream()
+                .map(ProjectMemberRelation::getMemberId)
+                .toList();
+
+        List<MemberDTO> members = this.memberClient.findMemberByIds(membersIds).stream().map(MemberMapper::toDTO).toList();
+        MemberDTO manager = this.memberClient.findMemberByIds(List.of(project.getGerente())).stream().map(MemberMapper::toDTO).findFirst().orElse(null);
+
+        return ProjectMapper.toProjectDTO(project, members, manager);
+    }
+
+    public List<ProjectDTO> listProjects(ProjectFilterForm filterForm, int page, int size, String sortBy, String direction) {
+        if (size > 100)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tamanho da página não pode ser maior que 100");
+
+        Sort sort = direction.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        return this.projectRepository.findAll(ProjectSpecification.withFilters(filterForm), pageable)
+                .stream()
                 .map(ProjectMapper::toProjectDTO)
                 .collect(Collectors.toList());
     }
@@ -183,12 +231,12 @@ public class ProjectService {
 
     private Risco calculateRisk(
             BigDecimal orcamento,
-            LocalDateTime dataInicio,
-            LocalDateTime dataPrevistaTermino
+            LocalDate dataInicio,
+            LocalDate dataPrevistaTermino
     ) {
         long months = ChronoUnit.MONTHS.between(
-                dataInicio.toLocalDate(),
-                dataPrevistaTermino.toLocalDate());
+                dataInicio,
+                dataPrevistaTermino);
 
         if (orcamento.compareTo(new BigDecimal("500000")) > 0 || months > 6)
             return Risco.ALTO;

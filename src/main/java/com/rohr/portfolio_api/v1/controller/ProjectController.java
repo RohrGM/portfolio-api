@@ -1,8 +1,9 @@
 package com.rohr.portfolio_api.v1.controller;
 
 import com.rohr.portfolio_api.v1.domain.dto.ProjectDTO;
-import com.rohr.portfolio_api.v1.domain.form.ProcjectUpdateForm;
 import com.rohr.portfolio_api.v1.domain.form.ProjectCreateForm;
+import com.rohr.portfolio_api.v1.domain.form.ProjectFilterForm;
+import com.rohr.portfolio_api.v1.domain.form.ProjectUpdateForm;
 import com.rohr.portfolio_api.v1.service.ProjectService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,14 +27,28 @@ public class ProjectController {
     }
 
     @GetMapping("/list")
-    public ResponseEntity<List<ProjectDTO>> listProject() {
-        return ResponseEntity.ok(this.projectService.listProjects());
+    public ResponseEntity<List<ProjectDTO>> listProject(
+            @ModelAttribute ProjectFilterForm filter,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String direction
+
+    ) {
+        return ResponseEntity.ok(this.projectService.listProjects(filter, page, size, sortBy, direction));
+    }
+
+    @GetMapping("/find/{id}")
+    public ResponseEntity<ProjectDTO> findProjectById(
+            @PathVariable Long id
+    ) {
+        return ResponseEntity.ok(this.projectService.findProject(id));
     }
 
     @PatchMapping("/update/{id}")
     public ResponseEntity<ProjectDTO> updateProject(
             @PathVariable Long id,
-            @Valid @RequestBody ProcjectUpdateForm form
+            @Valid @RequestBody ProjectUpdateForm form
     ) {
         return ResponseEntity.ok(this.projectService.updateProject(id, form));
     }

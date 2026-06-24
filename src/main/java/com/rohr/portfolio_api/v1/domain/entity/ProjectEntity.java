@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -20,9 +21,9 @@ public class ProjectEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String nome;
-    private LocalDateTime dataInicio;
-    private LocalDateTime dataPrevistaTermino;
-    private LocalDateTime dataTermino;
+    private LocalDate dataInicio;
+    private LocalDate dataPrevistaTermino;
+    private LocalDate dataTermino;
     private BigDecimal orcamento;
     private String descricao;
     private Long gerente;

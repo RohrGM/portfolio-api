@@ -5,7 +5,7 @@ spring:
   datasource:
     url: jdbc:postgresql://dpg-d8ta66jtqb8s73djm370-a.virginia-postgres.render.com/portfolio_projeto
     username: portfolio_projeto_user
-    password: 905UfW9mXf7tyn2Y4FxedznswP7aos0t
+    password: ${DB_PASSWORD}
   jpa:
     hibernate:
       ddl-auto: update

@@ -33,4 +33,6 @@ public interface ProjectMemberRelationRepository extends JpaRepository<ProjectMe
     @Query(value = "DELETE FROM project_member_relation WHERE project_id = :projectId", nativeQuery = true)
     void deleteByProjectIds(@Param("projectId") Long projectId);
 
+    List<ProjectMemberRelation> findByProjectId(Long projectId);
+
 }
