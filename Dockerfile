@@ -6,7 +6,7 @@ RUN gradle build --no-daemon
 
 # Package stage
 
-FROM openjdk:21-alpine
+FROM eclipse-temurin:21-jdk
 ENV JAR_NAME=portfolio-api-1.0.0-SNAPSHOT.jar
 ENV APP_HOME=/usr/app
 WORKDIR $APP_HOME
