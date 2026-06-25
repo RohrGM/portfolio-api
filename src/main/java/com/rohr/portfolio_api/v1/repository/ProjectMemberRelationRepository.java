@@ -14,24 +14,36 @@ import java.util.List;
 public interface ProjectMemberRelationRepository extends JpaRepository<ProjectMemberRelation, Long> {
 
 
-    @Query(value = "SELECT DISTINCT pmr.member_id\n" +
-            "FROM project_member_relation pmr\n" +
-            "WHERE pmr.member_id IN (\n" +
-            "    SELECT pmr2.member_id\n" +
-            "    FROM project_member_relation pmr2\n" +
-            "    JOIN project p2\n" +
-            "        ON p2.id = pmr2.project_id\n" +
-            "    WHERE pmr2.member_id IN :memberIds\n" +
-            "      AND p2.status NOT IN (6, 7)\n" +
-            "    GROUP BY pmr2.member_id\n" +
-            "    HAVING COUNT(*) >= 3\n" +
-            ")", nativeQuery = true)
+    @Query(value = """
+            SELECT DISTINCT pmr.member_id
+            FROM project_member_relation pmr
+            WHERE pmr.member_id IN (
+                SELECT pmr2.member_id
+                FROM project_member_relation pmr2
+                JOIN project p2
+                    ON p2.id = pmr2.project_id
+                WHERE pmr2.member_id IN :memberIds
+                  AND p2.status NOT IN (6, 7)
+                GROUP BY pmr2.member_id
+                HAVING COUNT(*) >= 3
+            )
+            """, nativeQuery = true)
     List<Long> findMembersWithMaxProjects(@Param("memberIds") List<Long> memberIds);
 
     @Modifying
     @Transactional
     @Query(value = "DELETE FROM project_member_relation WHERE project_id = :projectId", nativeQuery = true)
     void deleteByProjectIds(@Param("projectId") Long projectId);
+
+    @Query(value = """
+            SELECT COUNT(DISTINCT pmr.member_id)
+            FROM project_member_relation pmr
+            WHERE pmr.project_id IN (
+                SELECT id
+                FROM project
+                WHERE status NOT IN (6, 7)
+            )""", nativeQuery = true)
+    Long countAllocatedMembers();
 
     List<ProjectMemberRelation> findByProjectId(Long projectId);
 
