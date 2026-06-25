@@ -1,9 +1,6 @@
 package com.rohr.portfolio_api.v1.service;
 
 import com.rohr.portfolio_api.v1.domain.dto.DashboardReportDTO;
-import com.rohr.portfolio_api.v1.domain.dto.ProjectCountBudgetDTO;
-import com.rohr.portfolio_api.v1.domain.dto.ProjectCountStatusDTO;
-import com.rohr.portfolio_api.v1.domain.enums.Status;
 import com.rohr.portfolio_api.v1.mapper.DashboardMapper;
 import com.rohr.portfolio_api.v1.repository.ProjectMemberRelationRepository;
 import com.rohr.portfolio_api.v1.repository.ProjectRepository;

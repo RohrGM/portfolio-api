@@ -13,13 +13,6 @@ import java.util.List;
 )
 public interface MemberClient {
     @GetMapping(
-            value = "/api/v1/member/list-all",
-            consumes = "application/json",
-            produces = "application/json"
-    )
-    List<MemberResponse> listAllMembers();
-
-    @GetMapping(
             value = "/api/v1/member/find",
             consumes = "application/json",
             produces = "application/json"

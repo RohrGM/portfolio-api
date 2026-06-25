@@ -41,7 +41,7 @@ public class ProjectService {
     @Autowired
     private ProjectMemberRelationRepository projectMemberRelationRepository;
     @Autowired
-    private MemberClient memberClient;
+    private MemberService memberService;
 
     @Transactional
     public ProjectDTO createProject(ProjectCreateForm form) {
@@ -122,8 +122,8 @@ public class ProjectService {
                 .map(ProjectMemberRelation::getMemberId)
                 .toList();
 
-        List<MemberDTO> members = this.memberClient.findMemberByIds(membersIds).stream().map(MemberMapper::toDTO).toList();
-        MemberDTO manager = this.memberClient.findMemberByIds(List.of(project.getGerente())).stream().map(MemberMapper::toDTO).findFirst().orElse(null);
+        List<MemberDTO> members = this.memberService.findMemberByIds(membersIds).stream().map(MemberMapper::toDTO).toList();
+        MemberDTO manager = this.memberService.findMemberByIds(List.of(project.getGerente())).stream().map(MemberMapper::toDTO).findFirst().orElse(null);
 
         return ProjectMapper.toProjectDTO(project, members, manager);
     }
@@ -154,8 +154,8 @@ public class ProjectService {
                 .map(ProjectMemberRelation::getMemberId)
                 .toList();
 
-        List<MemberDTO> members = this.memberClient.findMemberByIds(membersIds).stream().map(MemberMapper::toDTO).toList();
-        MemberDTO manager = this.memberClient.findMemberByIds(List.of(project.getGerente())).stream().map(MemberMapper::toDTO).findFirst().orElse(null);
+        List<MemberDTO> members = this.memberService.findMemberByIds(membersIds).stream().map(MemberMapper::toDTO).toList();
+        MemberDTO manager = this.memberService.findMemberByIds(List.of(project.getGerente())).stream().map(MemberMapper::toDTO).findFirst().orElse(null);
 
         return ProjectMapper.toProjectDTO(project, members, manager);
     }
@@ -182,20 +182,23 @@ public class ProjectService {
     }
 
     private void checkStatusIsValid(Status current, Status newStatus) {
-        if (current == Status.CANCELADO || current.ordinal() + 1 == newStatus.ordinal())
+        if (newStatus == Status.CANCELADO || current.ordinal() + 1 == newStatus.ordinal())
             return;
 
         throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Sequencia de status invalida");
     }
 
     private void checkManagerIsValid(Long id) {
-        List<MemberResponse> response = this.memberClient.findMemberByIds(List.of(id));
+        List<MemberResponse> response = this.memberService.findMemberByIds(List.of(id));
         if (response.isEmpty())
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Gerente não encontrado");
     }
 
     private void checkMembersIsValid(List<Long> membersIds) {
-        List<MemberResponse> memberResponses = this.memberClient.findMemberByIds(membersIds);
+        if(membersIds.isEmpty() || membersIds.size() > 10)
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Membros inválidos: quantidade de membros deve ser entre 1 e 10");
+
+        List<MemberResponse> memberResponses = this.memberService.findMemberByIds(membersIds);
 
         if (memberResponses.size() != membersIds.size()) {
 
