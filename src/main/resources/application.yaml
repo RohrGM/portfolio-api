@@ -3,7 +3,7 @@ spring:
     name: portfolio-api
 
   datasource:
-    url: jdbc:postgresql://dpg-d8ta66jtqb8s73djm370-a.virginia-postgres.render.com/portfolio_projeto
+    url: ${DB_URL}
     username: portfolio_projeto_user
     password: ${DB_PASSWORD}
   jpa:
