@@ -16,11 +16,16 @@ public class ProjectSpecification {
             List<Predicate> predicates = new ArrayList<>();
 
             if (filter.getNome() != null && !filter.getNome().isBlank())
-                predicates.add(cb.like(cb.lower(root.get("nome")), "%" + filter.getNome() + "%"));
+                predicates.add(cb.like(cb.lower(root.get("nome")), "%" + filter.getNome().toLowerCase() + "%"));
 
             if (filter.getId() != null)
                 predicates.add(cb.equal(root.get("id"), filter.getId()));
 
+            if (filter.getStatus() != null)
+                predicates.add(cb.equal(root.get("status"), filter.getStatus()));
+
+            if (filter.getRisco() != null)
+                predicates.add(cb.equal(root.get("risco"), filter.getRisco()));
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
