@@ -7,6 +7,7 @@ import com.rohr.portfolio_api.v1.domain.form.ProjectUpdateForm;
 import com.rohr.portfolio_api.v1.service.ProjectService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,7 +24,7 @@ public class ProjectController {
     public ResponseEntity<ProjectDTO> createProject(
             @Valid @RequestBody ProjectCreateForm form
     ) {
-        return ResponseEntity.ok(this.projectService.createProject(form));
+        return ResponseEntity.status(HttpStatus.CREATED).body(this.projectService.createProject(form));
     }
 
     @GetMapping("/list")
